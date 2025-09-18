@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather Dashboard • Synthetic</title>
+  <style>
+    :root {
+      --bg: #0f1223;
+      --bg-soft: rgba(255,255,255,0.06);
+      --card: rgba(255,255,255,0.08);
+      --text: #e7e9f0;
+      --text-dim: #b7bbcc;
+      --accent: #7bdcff;
+      --accent-2: #ffb86b;
+      --good: #56e39f;
+      --warn: #ffd166;
+      --bad: #ff6b6b;
+      --shadow: 0 8px 30px rgba(0,0,0,0.35);
+      --glass: saturate(120%) blur(12px);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --ring: 0 0 0 1px rgba(255,255,255,0.06) inset, 0 1px 0 rgba(255,255,255,0.05) inset;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+    }
+    [data-theme="light"] {
+      --bg: #eef2f7;
+      --bg-soft: rgba(0,0,0,0.03);
+      --card: rgba(255,255,255,0.85);
+      --text: #10131a;
+      --text-dim: #546179;
+      --accent: #1363df;
+      --accent-2: #e67e22;
+      --good: #2ea44f;
+      --warn: #b8860b;
+      --bad: #d93f3f;
+      --shadow: 0 10px 24px rgba(16,19,26,0.12);
+      --ring: 0 0 0 1px rgba(16,19,26,0.06) inset, 0 1px 0 rgba(255,255,255,0.6) inset;
+      --glass: saturate(120%) blur(6px);
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    /* Background gradient + glow */
+    .backdrop {
+      position: fixed;
+      inset: -30vmax -10vmax auto auto;
+      width: 80vmax;
+      height: 80vmax;
+      background: radial-gradient(50% 50% at 50% 50%, rgba(123,220,255,0.30) 0%, rgba(123,220,255,0.08) 40%, rgba(255,255,255,0) 70%),
+                  radial-gradient(40% 40% at 70% 60%, rgba(255,145,77,0.25) 0%, rgba(255,145,77,0.05) 50%, rgba(255,255,255,0) 75%);
+      filter: blur(30px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .backdrop.b2 {
+      inset: auto auto -40vmax -10vmax;
+      width: 70vmax;
+      height: 70vmax;
+      background: radial-gradient(50% 50% at 50% 50%, rgba(123,220,255,0.20) 0%, rgba(123,220,255,0.06) 45%, rgba(255,255,255,0) 70%),
+                  radial-gradient(50% 50% at 40% 40%, rgba(86,227,159,0.2) 0%, rgba(86,227,159,0.05) 55%, rgba(255,255,255,0) 75%);
+    }
+
+    header.topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: var(--glass);
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2), transparent);
+      padding: 16px clamp(12px, 3vw, 24px);
+    }
+    .topbar .inner {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      font-size: clamp(16px, 1.4vw + 10px, 24px);
+    }
+    .brand .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .select, .segmented, .ghost-btn {
+      background: var(--card);
+      backdrop-filter: var(--glass);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      border: none;
+      box-shadow: var(--ring), var(--shadow);
+      height: 40px;
+      padding: 0 12px;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    select {
+      appearance: none;
+      background: transparent;
+      border: none;
+      color: inherit;
+      font: inherit;
+      padding-right: 20px;
+      outline: none;
+      cursor: pointer;
+    }
+    .select {
+      position: relative;
+      padding-right: 30px;
+    }
+    .select:after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      width: 9px;
+      height: 9px;
+      border-bottom: 2px solid var(--text-dim);
+      border-right: 2px solid var(--text-dim);
+      transform: rotate(45deg);
+      top: calc(50% - 6px);
+      opacity: 0.7;
+    }
+
+    .segmented {
+      padding: 4px;
+      gap: 4px;
+    }
+    .segmented button {
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    .segmented button.active {
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+      box-shadow: inset 0 -1px 0 rgba(255,255,255,0.12), inset 0 1px 0 rgba(0,0,0,0.12);
+    }
+
+    .ghost-btn {
+      background: var(--card);
+      padding: 0 12px;
+      cursor: pointer;
+      transition: transform .15s ease, opacity .2s ease, background .2s ease;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+    .ghost-btn:hover {
+      transform: translateY(-1px);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 20px auto 60px;
+      padding: 0 clamp(12px, 3vw, 24px);
+      position: relative;
+      z-index: 1;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+    .cards {
+      grid-template-columns: 1.3fr 1fr 1fr 1fr;
+    }
+    @media (max-width: 1000px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 650px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: var(--glass);
+      border-radius: var(--radius);
+      box-shadow: var(--ring), var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .card .pad {
+      padding: 16px;
+    }
+    .card.gradient::before {
+      content: "";
+      position: absolute;
+      inset: -40% -40% auto auto;
+      width: 80%;
+      height: 80%;
+      filter: blur(28px);
+      opacity: 0.25;
+      background: radial-gradient(50% 50% at 50% 50%, var(--accent) 0%, rgba(123,220,255,0) 70%),
+                  radial-gradient(40% 40% at 60% 60%, var(--accent-2) 0%, rgba(255,145,77,0) 70%);
+      pointer-events: none;
+    }
+
+    .current {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      min-height: 140px;
+    }
+    .current .left { padding: 16px; }
+    .current .temp {
+      font-size: clamp(38px, 5.2vw, 64px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .current .hi-lo {
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .current .cond {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .current .cond .icon {
+      font-size: 20px;
+    }
+    .current .right {
+      display: grid;
+      place-items: center;
+      padding: 12px;
+    }
+    .big-emoji {
+      font-size: clamp(48px, 8vw, 88px);
+      transform: translateY(6px);
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,0.25));
+    }
+
+    .stat {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 90px;
+      padding: 16px;
+    }
+    .stat .badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 18px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+    }
+    .stat .label {
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: .2px;
+    }
+    .stat .value {
+      font-weight: 800;
+      font-size: 20px;
+    }
+    .bar {
+      height: 8px;
+      background: var(--bg-soft);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar > span {
+      height: 100%;
+      display: block;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width .4s ease;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 950px) {
+      .charts { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+      position: relative;
+      padding: 12px 10px 8px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px 10px;
+    }
+    .chart-title {
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+    .legend {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .lgd {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lgd .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+    }
+    canvas {
+      width: 100%;
+      height: 260px;
+      display: block;
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    }
+
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(25, 28, 45, 0.92);
+      color: #fff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.2;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+      transform: translate(-50%, -120%);
+      opacity: 0;
+      transition: opacity .12s ease, transform .12s ease;
+      z-index: 4;
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap;
+    }
+    [data-theme="light"] .tooltip {
+      background: rgba(255,255,255,0.95);
+      color: #10131a;
+    }
+
+    .forecast {
+      margin-top: 16px;
+    }
+    .forecast .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      font-weight: 800;
+    }
+    .forecast .row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(150px, 1fr);
+      gap: 12px;
+      overflow-x: auto;
+      padding: 0 16px 16px 16px;
+      scrollbar-width: thin;
+      scroll-snap-type: x proximity;
+    }
+    .forecast .day {
+      scroll-snap-align: start;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+      padding: 12px;
+      border-radius: 14px;
+      display: grid;
+      gap: 8px;
+      place-items: center;
+      text-align: center;
+      min-height: 140px;
+      box-shadow: var(--ring);
+    }
+    .forecast .d-label { color: var(--text-dim); font-weight: 700; font-size: 12px; }
+    .forecast .d-temp { font-weight: 800; }
+    .forecast .d-emoji { font-size: 28px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25)); }
+    .forecast .d-lohi { color: var(--text-dim); font-size: 12px; font-weight: 700; }
+
+    footer {
+      opacity: 0.7;
+      color: var(--text-dim);
+      font-size: 12px;
+      text-align: center;
+      padding: 24px 0 60px;
+    }
+    .muted { color: var(--text-dim); }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+
+    /* Tiny interactions */
+    .fade-in {
+      animation: fadein .35s ease forwards;
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    @keyframes fadein {
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop"></div>
+  <div class="backdrop b2"></div>
+
+  <header class="topbar">
+    <div class="inner">
+      <div class="brand">
+        <div class="logo">☀️</div>
+        <div>Weather Dashboard</div>
+      </div>
+
+      <div class="controls">
+        <div class="select">
+          <label for="city" class="sr-only">City</label>
+          <select id="city">
+            <option>Seattle</option>
+            <option>Phoenix</option>
+            <option>New York</option>
+            <option>London</option>
+            <option>Tokyo</option>
+            <option>Sydney</option>
+            <option>Reykjavik</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="segmented" id="unitToggle" role="tablist" aria-label="Units">
+        <button data-u="C" class="active" role="tab" aria-selected="true">°C</button>
+        <button data-u="F" role="tab" aria-selected="false">°F</button>
+      </div>
+
+      <div class="segmented" id="rangeToggle" role="tablist" aria-label="Range">
+        <button data-r="7" class="active" role="tab" aria-selected="true">7d</button>
+        <button data-r="14" role="tab" aria-selected="false">14d</button>
+        <button data-r="30" role="tab" aria-selected="false">30d</button>
+      </div>
+
+      <button class="ghost-btn" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="grid cards">
+      <article class="card gradient current fade-in" id="currentCard" aria-live="polite">
+        <div class="left">
+          <div class="temp" id="currentTemp">--°</div>
+          <div class="hi-lo" id="hiLo">H: --° / L: --°</div>
+          <div class="cond">
+            <span class="icon" id="condIcon">☁️</span>
+            <span id="condText">-</span>
+          </div>
+        </div>
+        <div class="right">
+          <div class="big-emoji" id="heroEmoji">☀️</div>
+        </div>
+      </article>
+
+      <article class="card stat fade-in">
+        <div class="badge" style="background: linear-gradient(135deg, var(--accent), #4dd0e1)">💧</div>
+        <div>
+          <div class="label">Humidity</div>
+          <div class="value" id="humidityVal">--%</div>
+        </div>
+        <div class="bar"><span id="humidityBar" style="width:0%"></span></div>
+      </article>
+
+      <article class="card stat fade-in">
+        <div class="badge" style="background: linear-gradient(135deg, #8e2de2, #4a00e0)">🍃</div>
+        <div>
+          <div class="label">Wind</div>
+          <div class="value" id="windVal">-- km/h</div>
+        </div>
+        <div class="bar"><span id="windBar" style="width:0%"></span></div>
+      </article>
+
+      <article class="card stat fade-in">
+        <div class="badge" style="background: linear-gradient(135deg, #ff9966, #ff5e62)">🌧️</div>
+        <div>
+          <div class="label">Precip Today</div>
+          <div class="value" id="precipVal">-- mm</div>
+        </div>
+        <div class="bar"><span id="precipBar" style="width:0%"></span></div>
+      </article>
+    </section>
+
+    <section class="charts">
+      <article class="card chart-card fade-in">
+        <div class="chart-header">
+          <div class="chart-title">Temperature trend</div>
+          <div class="legend">
+            <span class="lgd"><span class="dot" style="background:#ff7eb3"></span> High</span>
+            <span class="lgd"><span class="dot" style="background:#7bdcff"></span> Low</span>
+          </div>
+        </div>
+        <div style="position:relative">
+          <canvas id="tempChart" height="260"></canvas>
+          <div class="tooltip" id="tempTip"></div>
+        </div>
+      </article>
+
+      <article class="card chart-card fade-in">
+        <div class="chart-header">
+          <div class="chart-title">Precipitation</div>
+          <div class="legend">
+            <span class="lgd"><span class="dot" style="background:#56e39f"></span> mm/day</span>
+          </div>
+        </div>
+        <div style="position:relative">
+          <canvas id="precipChart" height="260"></canvas>
+          <div class="tooltip" id="precipTip"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card forecast fade-in">
+      <div class="title">10‑day forecast</div>
+      <div class="row" id="forecastRow" aria-live="polite"></div>
+    </section>
+
+    <footer>
+      Synthetic weather data for demo purposes only. No external frameworks. Built with pure HTML/CSS/JS.
+    </footer>
+  </main>
+
+  <script>
+    // ---------- Utilities ----------
+    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    // Seeded RNG (Mulberry32)
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function() {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function hashString(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function boxMuller(rand) {
+      let u = 0, v = 0;
+      while (u === 0) u = rand();
+      while (v === 0) v = rand();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    // ---------- Climate presets ----------
+    const climates = {
+      "Seattle":   { baseTemp: 16, precip: 0.55, humidity: 0.75, wind: 14, amp: 9, hemi: "N" },
+      "Phoenix":   { baseTemp: 32, precip: 0.08, humidity: 0.25, wind: 12, amp: 16, hemi: "N" },
+      "New York":  { baseTemp: 20, precip: 0.35, humidity: 0.60, wind: 16, amp: 14, hemi: "N" },
+      "London":    { baseTemp: 18, precip: 0.45, humidity: 0.70, wind: 18, amp: 10, hemi: "N" },
+      "Tokyo":     { baseTemp: 22, precip: 0.40, humidity: 0.65, wind: 14, amp: 12, hemi: "N" },
+      "Sydney":    { baseTemp: 24, precip: 0.28, humidity: 0.55, wind: 18, amp: 10, hemi: "S" },
+      "Reykjavik": { baseTemp: 8,  precip: 0.35, humidity: 0.60, wind: 24, amp: 18, hemi: "N" },
+    };
+
+    function dayOfYear(d) {
+      const start = new Date(d.getFullYear(), 0, 0);
+      const diff = d - start + (start.getTimezoneOffset() - d.getTimezoneOffset()) * 60_000;
+      return Math.floor(diff / 86_400_000);
+    }
+
+    function pickCondition(rand, tAvg, precipMM) {
+      if (precipMM > 0) {
+        if (tAvg <= 1.5) return "Snow";
+        const stormChance = clamp(precipMM / 20, 0, 0.6);
+        if (rand() < stormChance) return "Thunderstorm";
+        return "Rain";
+      }
+      const r = rand();
+      if (r < 0.15) return "Fog";
+      if (r < 0.40) return "Cloudy";
+      if (r < 0.70) return "Partly Cloudy";
+      return "Sunny";
+    }
+    function conditionEmoji(cond) {
+      switch (cond) {
+        case "Sunny": return "☀️";
+        case "Partly Cloudy": return "🌤️";
+        case "Cloudy": return "☁️";
+        case "Rain": return "🌧️";
+        case "Thunderstorm": return "⛈️";
+        case "Snow": return "❄️";
+        case "Fog": return "🌫️";
+        default: return "🌈";
+      }
+    }
+
+    // ---------- Data generation ----------
+    function generateData(city, days = 14, seedOffset = 0) {
+      const climate = climates[city] || climates["Seattle"];
+      const today = new Date();
+      const seed = hashString(city + today.getFullYear() + seedOffset);
+      const rand = mulberry32(seed);
+
+      const list = [];
+      const doy0 = dayOfYear(today);
+      const phaseShift = climate.hemi === "S" ? 182 : 0;
+
+      for (let i = 0; i < days; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const doy = doy0 + i;
+
+        // Seasonal temperature swing
+        const seasonal = climate.amp * Math.sin(((2 * Math.PI) / 365) * (doy - 80 - phaseShift));
+
+        // Daily base and randomness
+        const base = climate.baseTemp + seasonal;
+        const noise = boxMuller(rand) * 2.5; // about ±5°C 95%
+        const tAvg = base + noise;
+
+        const diurnal = 6 + Math.abs(boxMuller(rand) * 1.5);
+        const tMax = tAvg + diurnal / 2;
+        const tMin = tAvg - diurnal / 2;
+
+        // Humidity, wind
+        const humidity = clamp(climate.humidity + (boxMuller(rand) * 0.12), 0.15, 0.95);
+        const wind = clamp(climate.wind + boxMuller(rand) * 4, 2, 60);
+
+        // Precipitation chance & amount
+        const precipChance = clamp(climate.precip + (humidity - 0.5) * 0.35 + (boxMuller(rand) * 0.1), 0, 0.95);
+        let precipMM = 0;
+        if (rand() < precipChance) {
+          precipMM = Math.max(0, (rand() * 18 + rand() * 6) * (0.5 + precipChance)); // skew
+          // Snow more likely if cold
+          if (tAvg <= 0) precipMM *= 0.8;
+        }
+
+        const condition = pickCondition(rand, tAvg, precipMM);
+
+        list.push({
+          date,
+          tMinC: tMin,
+          tMaxC: tMax,
+          humidity,
+          windKmh: wind,
+          precipMM,
+          condition
+        });
+      }
+
+      // Current snapshot based on day 0
+      const now = list[0];
+      const aqi = Math.round(clamp(30 + (1 - now.humidity) * 60 + Math.abs(boxMuller(rand) * 25), 10, 180));
+
+      return { city, days: list, current: {
+        tempC: lerp(now.tMinC, now.tMaxC, 0.65) + boxMuller(rand),
+        tMinC: now.tMinC,
+        tMaxC: now.tMaxC,
+        humidity: now.humidity,
+        windKmh: now.windKmh,
+        precipMM: now.precipMM,
+        condition: now.condition,
+        aqi
+      }};
+    }
+
+    // ---------- Unit helpers ----------
+    const Units = {
+      C: {
+        temp: c => c,
+        label: "°C",
+        wind: s => s,
+        windLabel: "km/h"
+      },
+      F: {
+        temp: c => c * 9/5 + 32,
+        label: "°F",
+        wind: s => s / 1.609, // mph
+        windLabel: "mph"
+      }
+    };
+
+    // ---------- Simple Canvas Charts ----------
+    function setupCanvas(canvas) {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    class LineChart {
+      constructor(canvas, options = {}) {
+        this.canvas = canvas;
+        this.opt = Object.assign({
+          padding: { left: 44, right: 12, top: 16, bottom: 24 },
+          gridColor: 'rgba(255,255,255,0.12)',
+          axisColor: 'rgba(255,255,255,0.25)',
+          labels: [],
+          series: [],  // [{name, color, values}]
+          yMin: null, yMax: null
+        }, options);
+        this.tooltip = options.tooltip;
+        this.meta = setupCanvas(canvas);
+        this.attach();
+      }
+      setData(labels, series, yMin=null, yMax=null) {
+        this.opt.labels = labels;
+        this.opt.series = series;
+        this.opt.yMin = yMin;
+        this.opt.yMax = yMax;
+        this.draw();
+      }
+      attach() {
+        window.addEventListener('resize', () => { this.meta = setupCanvas(this.canvas); this.draw(); });
+        this.canvas.addEventListener('mousemove', (e) => this.onMove(e));
+        this.canvas.addEventListener('mouseleave', () => this.showTip(false));
+      }
+      showTip(show, x=0, y=0, html='') {
+        if (!this.tooltip) return;
+        if (!show) {
+          this.tooltip.style.opacity = 0;
+          return;
+        }
+        const rect = this.canvas.getBoundingClientRect();
+        this.tooltip.style.left = (x + rect.left) + 'px';
+        this.tooltip.style.top = (y + rect.top - 10) + 'px';
+        this.tooltip.innerHTML = html;
+        this.tooltip.style.opacity = 1;
+      }
+      onMove(e) {
+        const { left, top } = this.canvas.getBoundingClientRect();
+        const mx = e.clientX - left;
+        const my = e.clientY - top;
+        const n = this.opt.labels.length;
+        if (!n) return;
+        const { padding } = this.opt;
+        const W = this.meta.width, H = this.meta.height;
+        const plotW = W - padding.left - padding.right;
+        const plotH = H - padding.top - padding.bottom;
+        const xStep = n > 1 ? plotW / (n - 1) : plotW;
+
+        let idx = Math.round((mx - padding.left) / xStep);
+        idx = clamp(idx, 0, n - 1);
+
+        // Build tooltip
+        const lines = [];
+        const label = this.opt.labels[idx];
+        this.opt.series.forEach(s => {
+          const v = s.values[idx];
+          if (v == null) return;
+          lines.push(`<span style="display:inline-block;width:8px;height:8px;background:${s.color};border-radius:50%;margin-right:6px"></span>${s.name}: <b>${v.toFixed(1)}</b>`);
+        });
+        const html = `<div style="font-weight:800;margin-bottom:4px">${label}</div>${lines.join('<br>')}`;
+
+        const x = padding.left + idx * xStep;
+        const y = padding.top + 10;
+        this.draw(idx); // redraw with cursor
+        this.showTip(true, x, y, html);
+      }
+      draw(cursorIdx = null) {
+        const { ctx } = this.meta;
+        const { width: W, height: H } = this.meta;
+        const { padding, series, labels } = this.opt;
+        ctx.clearRect(0,0,W,H);
+
+        // Compute y range
+        const vals = series.flatMap(s => s.values).filter(v => v != null && !isNaN(v));
+        const yMin = this.opt.yMin ?? Math.min(...vals);
+        const yMax = this.opt.yMax ?? Math.max(...vals);
+        const pad = (yMax - yMin) * 0.12 || 1;
+        const min = Math.floor((yMin - pad) * 1) / 1;
+        const max = Math.ceil((yMax + pad) * 1) / 1;
+
+        const plotW = W - padding.left - padding.right;
+        const plotH = H - padding.top - padding.bottom;
+
+        // Axes & grid
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--bg-soft');
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim').trim() || 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 1;
+
+        const gridLines = 4;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+
+        for (let i = 0; i <= gridLines; i++) {
+          const t = i / gridLines;
+          const y = padding.top + plotH - t * plotH;
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+          if (document.documentElement.getAttribute('data-theme') === 'light') {
+            ctx.strokeStyle = 'rgba(16,19,26,0.08)';
+          }
+          ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(W - padding.right, y); ctx.stroke();
+          const val = lerp(min, max, t);
+          ctx.fillText(val.toFixed(0), padding.left - 6, y);
+        }
+
+        const n = labels.length;
+        const xStep = n > 1 ? plotW / (n - 1) : plotW;
+
+        function xPos(i) { return padding.left + i * xStep; }
+        function yPos(v) {
+          const t = (v - min) / (max - min || 1);
+          return padding.top + plotH - t * plotH;
+        }
+
+        // Series
+        series.forEach(s => {
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          s.values.forEach((v, i) => {
+            const x = xPos(i);
+            const y = yPos(v);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+
+          // Points
+          ctx.fillStyle = s.color;
+          s.values.forEach((v, i) => {
+            const x = xPos(i), y = yPos(v);
+            ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+          });
+        });
+
+        // Cursor
+        if (cursorIdx != null) {
+          const x = xPos(cursorIdx);
+          ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+          if (document.documentElement.getAttribute('data-theme') === 'light') {
+            ctx.strokeStyle = 'rgba(16,19,26,0.25)';
+          }
+          ctx.setLineDash([4,3]);
+          ctx.beginPath(); ctx.moveTo(x, padding.top); ctx.lineTo(x, H - padding.bottom); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    class BarChart {
+      constructor(canvas, options = {}) {
+        this.canvas = canvas;
+        this.opt = Object.assign({
+          padding: { left: 44, right: 12, top: 16, bottom: 24 },
+          labels: [],
+          values: [],
+          color: '#56e39f',
+          tooltip: null
+        }, options);
+        this.meta = setupCanvas(canvas);
+        this.attach();
+      }
+      setData(labels, values) {
+        this.opt.labels = labels; this.opt.values = values;
+        this.draw();
+      }
+      attach() {
+        window.addEventListener('resize', () => { this.meta = setupCanvas(this.canvas); this.draw(); });
+        this.canvas.addEventListener('mousemove', (e) => this.onMove(e));
+        this.canvas.addEventListener('mouseleave', () => this.showTip(false));
+      }
+      showTip(show, x=0, y=0, html='') {
+        const tip = this.opt.tooltip;
+        if (!tip) return;
+        if (!show) { tip.style.opacity = 0; return; }
+        const rect = this.canvas.getBoundingClientRect();
+        tip.style.left = (x + rect.left) + 'px';
+        tip.style.top = (y + rect.top - 10) + 'px';
+        tip.innerHTML = html;
+        tip.style.opacity = 1;
+      }
+      onMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const n = this.opt.labels.length;
+        if (!n) return;
+        const { padding } = this.opt;
+        const W = this.meta.width, H = this.meta.height;
+        const plotW = W - padding.left - padding.right;
+        const plotH = H - padding.top - padding.bottom;
+        const xStep = plotW / n;
+        let idx = Math.floor((mx - padding.left) / xStep);
+        idx = clamp(idx, 0, n - 1);
+
+        const x = padding.left + idx * xStep + xStep/2;
+        this.draw(idx);
+        const val = this.opt.values[idx] ?? 0;
+        const html = `<div style="font-weight:800;margin-bottom:4px">${this.opt.labels[idx]}</div>Precip: <b>${val.toFixed(1)} mm</b>`;
+        this.showTip(true, x, padding.top + 10, html);
+      }
+      draw(cursorIdx = null) {
+        const { ctx } = this.meta;
+        const { width: W, height: H } = this.meta;
+        const { padding, values, labels, color } = this.opt;
+        ctx.clearRect(0,0,W,H);
+
+        const plotW = W - padding.left - padding.right;
+        const plotH = H - padding.top - padding.bottom;
+
+        const maxV = Math.max(1, Math.max(...values, 0));
+        const gridLines = 4;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        if (document.documentElement.getAttribute('data-theme') === 'light') {
+          ctx.strokeStyle = 'rgba(16,19,26,0.08)';
+        }
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim').trim() || 'rgba(255,255,255,0.6)';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+        for (let i = 0; i <= gridLines; i++) {
+          const t = i / gridLines;
+          const y = padding.top + plotH - t * plotH;
+          ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(W - padding.right, y); ctx.stroke();
+          const val = (maxV * t);
+          ctx.fillText(val.toFixed(0), padding.left - 6, y);
+        }
+
+        // Bars
+        const n = labels.length;
+        const xStep = plotW / n;
+        const barW = Math.max(6, xStep * 0.6);
+
+        for (let i = 0; i < n; i++) {
+          const v = values[i] ?? 0;
+          const x = padding.left + i * xStep + (xStep - barW) / 2;
+          const h = (v / maxV) * plotH;
+          const y = padding.top + plotH - h;
+
+          // Highlight
+          if (i === cursorIdx) {
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            if (document.documentElement.getAttribute('data-theme') === 'light') {
+              ctx.fillStyle = 'rgba(16,19,26,0.08)';
+            }
+            ctx.fillRect(x - 6, padding.top, barW + 12, plotH);
+          }
+
+          const grad = ctx.createLinearGradient(0, y, 0, y + h);
+          grad.addColorStop(0, color);
+          grad.addColorStop(1, 'rgba(123,220,255,0.35)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x, y, barW, h);
+
+          // Bar top round
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.15;
+          ctx.fillRect(x, y - 2, barW, 2);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // ---------- App State ----------
+    const state = {
+      city: 'Seattle',
+      unit: 'C',
+      range: 14,
+      data: null
+    };
+
+    // ---------- DOM refs ----------
+    const citySel = document.getElementById('city');
+    const unitToggle = document.getElementById('unitToggle');
+    const rangeToggle = document.getElementById('rangeToggle');
+    const themeToggle = document.getElementById('themeToggle');
+
+    const currentTemp = document.getElementById('currentTemp');
+    const hiLo = document.getElementById('hiLo');
+    const condIcon = document.getElementById('condIcon');
+    const condText = document.getElementById('condText');
+    const heroEmoji = document.getElementById('heroEmoji');
+
+    const humidityVal = document.getElementById('humidityVal');
+    const humidityBar = document.getElementById('humidityBar');
+    const windVal = document.getElementById('windVal');
+    const windBar = document.getElementById('windBar');
+    const precipVal = document.getElementById('precipVal');
+    const precipBar = document.getElementById('precipBar');
+
+    const tempChartEl = document.getElementById('tempChart');
+    const precipChartEl = document.getElementById('precipChart');
+
+    const tempTip = document.getElementById('tempTip');
+    const precipTip = document.getElementById('precipTip');
+
+    const forecastRow = document.getElementById('forecastRow');
+
+    const tempChart = new LineChart(tempChartEl, { tooltip: tempTip });
+    const precipChart = new BarChart(precipChartEl, { tooltip: precipTip });
+
+    // ---------- Render ----------
+    function render() {
+      const { unit } = state;
+      const U = Units[unit];
+
+      // Current
+      const cur = state.data.current;
+      const temp = U.temp(cur.tempC);
+      const tMin = U.temp(cur.tMinC);
+      const tMax = U.temp(cur.tMaxC);
+
+      currentTemp.textContent = `${Math.round(temp)}${U.label}`;
+      hiLo.textContent = `H: ${Math.round(tMax)}${U.label} / L: ${Math.round(tMin)}${U.label}`;
+      condIcon.textContent = conditionEmoji(cur.condition);
+      condText.textContent = cur.condition;
+      heroEmoji.textContent = conditionEmoji(cur.condition);
+
+      humidityVal.textContent = `${Math.round(cur.humidity * 100)}%`;
+      humidityBar.style.width = `${Math.round(cur.humidity * 100)}%`;
+
+      const wind = U.wind(cur.windKmh);
+      windVal.textContent = `${Math.round(wind)} ${U.windLabel}`;
+      windBar.style.width = `${Math.round(clamp(wind / (unit === 'C' ? 60 : 37) * 100, 0, 100))}%`;
+
+      precipVal.textContent = `${cur.precipMM.toFixed(1)} mm`;
+      precipBar.style.width = `${Math.round(clamp(cur.precipMM / 20 * 100, 0, 100))}%`;
+
+      // Charts & forecast
+      const days = state.data.days.slice(0, state.range);
+      const labels = days.map(d => formatLabel(d.date));
+      const highs = days.map(d => Units[unit].temp(d.tMaxC));
+      const lows  = days.map(d => Units[unit].temp(d.tMinC));
+      const precs = days.map(d => d.precipMM);
+
+      tempChart.setData(
+        labels,
+        [
+          { name: 'High', color: '#ff7eb3', values: highs },
+          { name: 'Low',  color: '#7bdcff', values: lows }
+        ]
+      );
+      precipChart.setData(labels, precs);
+
+      renderForecast(state.data.days.slice(0, 10));
+    }
+
+    function renderForecast(days) {
+      forecastRow.innerHTML = '';
+      const U = Units[state.unit];
+      days.forEach((d, i) => {
+        const el = document.createElement('div');
+        el.className = 'day';
+        const date = new Date(d.date);
+        el.innerHTML = `
+          <div class="d-label">${i === 0 ? 'Today' : formatWeekday(date)}</div>
+          <div class="d-emoji">${conditionEmoji(d.condition)}</div>
+          <div class="d-temp">${Math.round(U.temp((d.tMaxC + d.tMinC)/2))}${U.label}</div>
+          <div class="d-lohi">H ${Math.round(U.temp(d.tMaxC))}° / L ${Math.round(U.temp(d.tMinC))}°</div>
+          <div class="muted" style="font-size:12px">💧 ${d.precipMM.toFixed(1)} mm</div>
+        `;
+        forecastRow.appendChild(el);
+      });
+    }
+
+    // ---------- Interactions ----------
+    citySel.addEventListener('change', () => {
+      state.city = citySel.value;
+      state.data = generateData(state.city, 60);
+      render();
+    });
+
+    unitToggle.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') return;
+      [...unitToggle.children].forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      state.unit = e.target.dataset.u;
+      render();
+    });
+
+    rangeToggle.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') return;
+      [...rangeToggle.children].forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      state.range = parseInt(e.target.dataset.r, 10);
+      render();
+    });
+
+    themeToggle.addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = cur === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      themeToggle.textContent = next === 'light' ? '🌞' : '🌙';
+      // Re-draw charts to pick new grid colors
+      tempChart.draw();
+      precipChart.draw();
+      // Persist
+      try { localStorage.setItem('theme', next); } catch {}
+    });
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+        themeToggle.textContent = saved === 'light' ? '🌞' : '🌙';
+      }
+    }
+
+    // ---------- Formatting ----------
+    function formatLabel(d) {
+      const dt = new Date(d);
+      return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+    function formatWeekday(d) {
+      return d.toLocaleDateString(undefined, { weekday: 'short' });
+    }
+
+    // ---------- Boot ----------
+    function boot() {
+      initTheme();
+      // Initialize state from controls
+      state.city = citySel.value;
+      state.data = generateData(state.city, 60);
+      render();
+    }
+    boot();
+  </script>
+</body>
+</html>
